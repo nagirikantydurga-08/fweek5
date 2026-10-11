@@ -1,0 +1,371 @@
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => CatalogModel(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class CatalogItem {
+  CatalogItem({
+    required this.id,
+    required this.name,
+    required this.icon,
+    required this.color,
+    this.isFavorite = false,
+  });
+
+  final int id;
+  final String name;
+  final IconData icon;
+  final Color color;
+  bool isFavorite;
+}
+
+class CatalogModel extends ChangeNotifier {
+  final List<CatalogItem> items = [
+    CatalogItem(
+      id: 1,
+      name: 'Flutter Basics',
+      icon: Icons.phone_android,
+      color: Colors.blue,
+    ),
+    CatalogItem(
+      id: 2,
+      name: 'UI Design',
+      icon: Icons.palette,
+      color: Colors.purple,
+    ),
+    CatalogItem(
+      id: 3,
+      name: 'Hackathon',
+      icon: Icons.emoji_events,
+      color: Colors.orange,
+    ),
+    CatalogItem(
+      id: 4,
+      name: 'Dart Essentials',
+      icon: Icons.code,
+      color: Colors.teal,
+    ),
+    CatalogItem(
+      id: 5,
+      name: 'Cloud Computing',
+      icon: Icons.cloud,
+      color: Colors.pink,
+    ),
+    CatalogItem(
+      id: 6,
+      name: 'App Challenge',
+      icon: Icons.rocket_launch,
+      color: Colors.indigo,
+    ),
+  ];
+
+  int get favoriteCount =>
+      items.where((item) => item.isFavorite).length;
+
+  void toggleFavorite(int id) {
+    final item = items.firstWhere((item) => item.id == id);
+    item.isFavorite = !item.isFavorite;
+    notifyListeners();
+  }
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Responsive Catalog',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+        scaffoldBackgroundColor: const Color(0xFFF5F6FA),
+      ),
+      home: const ResponsivePage(),
+    );
+  }
+}
+
+class ResponsivePage extends StatelessWidget {
+  const ResponsivePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 1024) {
+          return const DesktopLayout();
+        } else if (constraints.maxWidth >= 600) {
+          return const TabletLayout();
+        }
+        return const MobileLayout();
+      },
+    );
+  }
+}
+
+class MobileLayout extends StatelessWidget {
+  const MobileLayout({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = context.watch<CatalogModel>().favoriteCount;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Explore Catalog'),
+        actions: [
+          FavoriteBadge(count: count),
+          const SizedBox(width: 16),
+        ],
+      ),
+      body: const CatalogContent(columns: 1),
+    );
+  }
+}
+
+class TabletLayout extends StatelessWidget {
+  const TabletLayout({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = context.watch<CatalogModel>().favoriteCount;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Explore Catalog'),
+        actions: [
+          FavoriteBadge(count: count),
+          const SizedBox(width: 16),
+        ],
+      ),
+      body: const CatalogContent(columns: 2),
+    );
+  }
+}
+
+class DesktopLayout extends StatelessWidget {
+  const DesktopLayout({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = context.watch<CatalogModel>().favoriteCount;
+
+    return Scaffold(
+      body: Row(
+        children: [
+          NavigationRail(
+            selectedIndex: 0,
+            onDestinationSelected: (_) {},
+            labelType: NavigationRailLabelType.all,
+            destinations: [
+              const NavigationRailDestination(
+                icon: Icon(Icons.grid_view),
+                label: Text('Catalog'),
+              ),
+              NavigationRailDestination(
+                icon: FavoriteBadge(count: count, compact: true),
+                label: const Text('Favorites'),
+              ),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          const Expanded(
+            child: CatalogContent(
+              columns: 3,
+              desktop: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CatalogContent extends StatelessWidget {
+  const CatalogContent({
+    super.key,
+    required this.columns,
+    this.desktop = false,
+  });
+
+  final int columns;
+  final bool desktop;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = context.watch<CatalogModel>().items;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Discover something new',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          const Text('Tap the star to save your favorites.'),
+          const SizedBox(height: 20),
+          if (columns == 1)
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: 12),
+              itemBuilder: (context, index) =>
+                  ItemCard(item: items[index]),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              gridDelegate:
+                  SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                mainAxisExtent: 125,
+              ),
+              itemBuilder: (context, index) =>
+                  ItemCard(item: items[index]),
+            ),
+          if (desktop) ...[
+            const SizedBox(height: 20),
+            const CounterWidget(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class ItemCard extends StatelessWidget {
+  const ItemCard({super.key, required this.item});
+
+  final CatalogItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        leading: CircleAvatar(
+          backgroundColor: item.color.withAlpha(35),
+          child: Icon(item.icon, color: item.color),
+        ),
+        title: Text(
+          item.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: const Text('Explore and learn'),
+        trailing: IconButton(
+          onPressed: () {
+            Provider.of<CatalogModel>(
+              context,
+              listen: false,
+            ).toggleFavorite(item.id);
+          },
+          icon: Icon(
+            item.isFavorite
+                ? Icons.star
+                : Icons.star_border,
+            color: item.isFavorite
+                ? Colors.amber
+                : Colors.blueGrey,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FavoriteBadge extends StatelessWidget {
+  const FavoriteBadge({
+    super.key,
+    required this.count,
+    this.compact = false,
+  });
+
+  final int count;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 6 : 10),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star, color: Colors.orange),
+          const SizedBox(width: 4),
+          Text(
+            '$count',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CounterWidget extends StatefulWidget {
+  const CounterWidget({super.key});
+
+  @override
+  State<CounterWidget> createState() => _CounterWidgetState();
+}
+
+class _CounterWidgetState extends State<CounterWidget> {
+  int counter = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Desktop-only local counter',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            Text('Count: $counter'),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  counter++;
+                });
+              },
+              child: const Text('Increment'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
